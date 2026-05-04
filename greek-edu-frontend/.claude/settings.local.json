@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"C:\\\\Users\\\\θοδωρης\\\\AppData\\\\Local\\\\Packages\\\\Claude_pzs8sxrjxfjjc\\\\LocalCache\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\d6283764-ce1c-4e9e-aaed-5c98b55c107f\\\\fd0d121b-5284-4c21-bc35-79f55b78c82c\\\\local_b38681df-9c04-421d-8e7d-9d1e3854094a\\\\outputs\\\\EduPrompt-ready\\\\greek-edu-frontend\" /b)",
+      "Bash(findstr /i \"package json tsconfig\")",
+      "PowerShell($n = \"$env:LOCALAPPDATA\\\\claude-cli-nodejs\"; Get-ChildItem $n -Filter \"node.exe\" -ErrorAction SilentlyContinue | Select-Object FullName; Get-ChildItem $n -Filter \"npm.cmd\" -ErrorAction SilentlyContinue | Select-Object FullName)",
+      "Bash(winget --version)",
+      "Bash(where.exe node *)",
+      "Bash(winget install *)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;\" + $env:PATH; node --version; npm --version)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\")",
+      "Bash(npm --version)",
+      "Bash(npm install *)"
+    ]
+  }
+}
