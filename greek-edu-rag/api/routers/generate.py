@@ -58,6 +58,7 @@ class GenerateRequest(BaseModel):
     strategy: Optional[str] = None
     environments: list[str] = Field(default_factory=list, max_length=6)
     class_profile_id: Optional[str] = None
+    extra_instructions: Optional[str] = Field(default=None, max_length=400)
 
 
 # ── Endpoints ──────────────────────────────────────────────────
@@ -104,6 +105,7 @@ async def generate(
         strategy=req.strategy,
         environments=req.environments,
         class_profile_id=req.class_profile_id,
+        extra_instructions=req.extra_instructions,
     )
 
     try:

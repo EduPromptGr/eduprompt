@@ -6,7 +6,7 @@ PyJWT>=2.8                         # JWT για Supabase auth (HS256)
 cryptography>=42.0                  # απαιτείται από PyJWT
 
 # ── Supabase + Auth ───────────────────────────────────────────
-supabase>=2.4,<3.0
+supabase>=2.4,<2.10   # <2.10 αποφεύγει pyiceberg που δεν τρέχει σε Python 3.14
 
 # ── LLM — Anthropic Claude ────────────────────────────────────
 anthropic>=0.25

@@ -15,18 +15,7 @@ if not exist .env (
 )
 
 echo .env found OK
-echo.
-
 python --version
-if errorlevel 1 (
-    echo ERROR: Python not found!
-    echo Please install Python 3.11 from https://python.org
-    echo Make sure to check "Add Python to PATH" during install
-    echo.
-    pause
-    exit /b 1
-)
-
 echo.
 
 if not exist venv\ (
@@ -56,7 +45,7 @@ echo Docs at http://localhost:8000/docs
 echo Press Ctrl+C to stop
 echo.
 
-uvicorn api.main:app --reload --port 8000
+python -m uvicorn api.main:app --reload --port 8000
 
 echo.
 echo Server stopped.
