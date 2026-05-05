@@ -36,6 +36,7 @@ from api.routers import (
     journal,
     prompts,
     referral,
+    schedule_upload,
     schedules,
     school,
     webhooks,
@@ -86,6 +87,7 @@ app.include_router(class_profile.router)
 app.include_router(worksheets.router)
 app.include_router(curriculum.router)
 app.include_router(schedules.router)
+app.include_router(schedule_upload.router)   # POST /api/schedules/parse-file
 app.include_router(internal.router)
 
 

@@ -6,6 +6,7 @@
 // Πλήρης CRUD μέσω /api/schedules proxy routes.
 //
 // Δομή UI:
+//   • Upload zone: drag & drop / file picker (CSV, Excel, εικόνα → parse-file)
 //   • Header: επιλογή τάξης / σχολικό έτος / αποθήκευση / διαγραφή
 //   • Πίνακας: Δευτέρα–Παρασκευή × 7 ώρες (εικόνα τυπικού ΔΣ)
 //   • Κελί: μάθημα (combobox) + διάρκεια (λεπτά)
@@ -90,6 +91,10 @@ export default function ScheduleEditor() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadNotes, setUploadNotes] = useState<string[]>([])
+  const [dragOver, setDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Load existing schedule on grade/year change
@@ -214,6 +219,69 @@ export default function ScheduleEditor() {
     }
   }
 
+  const handleFileUpload = useCallback(async (file: File) => {
+    const allowed = [
+      'text/csv', 'application/csv',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'image/jpeg', 'image/png', 'image/webp',
+    ]
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+    const allowedExts = ['csv', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'webp']
+
+    if (!allowedExts.includes(ext)) {
+      setError(`Μη υποστηριζόμενος τύπος: .${ext}. Χρησιμοποίησε CSV, Excel ή εικόνα.`)
+      return
+    }
+
+    setUploading(true)
+    setError(null)
+    setUploadNotes([])
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const res = await fetch('/api/schedules/parse-file', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        setError(`Σφάλμα ανάλυσης: ${j.detail ?? j.error ?? `HTTP ${res.status}`}`)
+        return
+      }
+
+      const data: { schedule: Schedule; notes: string[] } = await res.json()
+
+      // Merge parsed schedule into current (don't overwrite manual edits for empty days)
+      const merged = { ...emptySchedule() }
+      for (const key of DAY_KEYS) {
+        merged[key] = data.schedule[key]?.length
+          ? data.schedule[key]
+          : schedule[key]
+      }
+      setSchedule(merged)
+      setSaveStatus('idle')
+
+      if (data.notes?.length) {
+        setUploadNotes(data.notes)
+      }
+    } catch (e) {
+      setError(`Σφάλμα ανέβασμα: ${(e as Error).message}`)
+    } finally {
+      setUploading(false)
+    }
+  }, [schedule])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files[0]
+    if (file) void handleFileUpload(file)
+  }, [handleFileUpload])
+
   const freq = subjectFrequency(schedule)
   const topSubjects = Object.entries(freq)
     .sort((a, b) => b[1] - a[1])
@@ -237,6 +305,76 @@ export default function ScheduleEditor() {
 
   return (
     <div className="space-y-6">
+      {/* ── Upload Zone ───────────────────────────────── */}
+      <div
+        onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        className={`
+          relative rounded-2xl border-2 border-dashed p-6 text-center transition-colors cursor-pointer
+          ${dragOver
+            ? 'border-violet-400 bg-violet-50'
+            : 'border-gray-200 bg-white hover:border-violet-300 hover:bg-violet-50/50'
+          }
+        `}
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,.xls,.xlsx,.jpg,.jpeg,.png,.webp"
+          className="hidden"
+          onChange={e => {
+            const file = e.target.files?.[0]
+            if (file) void handleFileUpload(file)
+            // Reset so same file can be re-uploaded
+            e.target.value = ''
+          }}
+        />
+
+        {uploading ? (
+          <div className="flex flex-col items-center gap-2 text-violet-600">
+            <div className="w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+            <span className="text-sm font-medium">Ανάλυση αρχείου…</span>
+            <span className="text-xs text-gray-400">Αν είναι εικόνα, χρησιμοποιούμε AI — μπορεί να πάρει 10–20''</span>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-3xl">📂</span>
+            <p className="text-sm font-semibold text-gray-700">
+              Σύρε αρχείο εδώ ή κλίκ για επιλογή
+            </p>
+            <p className="text-xs text-gray-400">
+              CSV · Excel (.xlsx) · Εικόνα (JPG/PNG) — μέχρι 10 MB
+            </p>
+            <div className="flex gap-2 mt-1">
+              {['📊 CSV', '📗 Excel', '🖼️ Εικόνα (AI OCR)'].map(label => (
+                <span key={label} className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">
+                  {label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Upload notes / warnings */}
+      {uploadNotes.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 space-y-1">
+          <p className="text-xs font-semibold text-amber-800">📋 Σημειώσεις ανάλυσης:</p>
+          {uploadNotes.map((n, i) => (
+            <p key={i} className="text-xs text-amber-700">{n}</p>
+          ))}
+          <button
+            type="button"
+            onClick={() => setUploadNotes([])}
+            className="text-xs text-amber-500 hover:text-amber-700 mt-1"
+          >
+            Κλείσιμο
+          </button>
+        </div>
+      )}
+
       {/* ── Controls ──────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-gray-200 p-4 flex flex-wrap items-center gap-4">
         {/* Grade */}

@@ -26,3 +26,6 @@ python-dateutil>=2.8
 httpx>=0.27
 python-dotenv>=1.0
 json-repair>=0.30                   # επιδιόρθωση malformed LLM JSON
+
+openpyxl>=3.1                       # αναλυση .xlsx ωρολογιων
+python-multipart>=0.0.9             # FastAPI file uploads (UploadFile)
