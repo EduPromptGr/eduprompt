@@ -24,9 +24,10 @@
 //   • Submit button έχει aria-busy κατά τη φόρτωση.
 //   • Error region έχει role=alert.
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import CurriculumDrawer from '@/components/CurriculumDrawer'
 
 // ── Whitelists (mirrored από api/services/prompt_service.py) ─────
 //
@@ -143,6 +144,7 @@ export default function GenerateForm({ initial }: GenerateFormProps = {}) {
     ...initial,
   })
   const [showExtra, setShowExtra] = useState(false)
+  const [curriculumOpen, setCurriculumOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [loadingStep, setLoadingStep] = useState(0)
   const [error, setError] = useState<{
@@ -331,6 +333,7 @@ export default function GenerateForm({ initial }: GenerateFormProps = {}) {
   }
 
   return (
+    <>
     <form
       onSubmit={handleSubmit}
       noValidate
@@ -450,13 +453,25 @@ export default function GenerateForm({ initial }: GenerateFormProps = {}) {
 
       {/* ── Objective ──────────────────────────────── */}
       <div>
-        <label
-          htmlFor="gen-objective"
-          className="block text-sm font-semibold text-gray-700 mb-2"
-        >
-          🎯 Στόχος μαθήματος{' '}
-          <span className="text-rose-500" aria-hidden>*</span>
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label
+            htmlFor="gen-objective"
+            className="block text-sm font-semibold text-gray-700"
+          >
+            🎯 Στόχος μαθήματος{' '}
+            <span className="text-rose-500" aria-hidden>*</span>
+          </label>
+          {form.grade && form.subject && (
+            <button
+              type="button"
+              onClick={() => setCurriculumOpen(true)}
+              className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 font-medium border border-violet-200 hover:border-violet-400 rounded-lg px-2.5 py-1 transition-colors bg-violet-50 hover:bg-violet-100"
+              title="Δες στόχους ΑΠΣ"
+            >
+              📚 ΑΠΣ
+            </button>
+          )}
+        </div>
         <textarea
           id="gen-objective"
           rows={3}
@@ -648,6 +663,18 @@ export default function GenerateForm({ initial }: GenerateFormProps = {}) {
       </div>
 
     </form>
+
+    {/* ── CurriculumDrawer ─────────────────────────── */}
+    <CurriculumDrawer
+      open={curriculumOpen}
+      onClose={() => setCurriculumOpen(false)}
+      grade={form.grade ?? ''}
+      subject={form.subject}
+      onSelect={(objective) => {
+        set('objective', objective)
+      }}
+    />
+    </>
   )
 }
 

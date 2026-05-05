@@ -29,12 +29,14 @@ load_dotenv()
 
 from api.routers import (
     class_profile,
+    curriculum,
     error_reports,
     generate,
     internal,
     journal,
     prompts,
     referral,
+    schedules,
     school,
     webhooks,
     worksheets,
@@ -82,6 +84,8 @@ app.include_router(error_reports.router)
 app.include_router(webhooks.router)
 app.include_router(class_profile.router)
 app.include_router(worksheets.router)
+app.include_router(curriculum.router)
+app.include_router(schedules.router)
 app.include_router(internal.router)
 
 
