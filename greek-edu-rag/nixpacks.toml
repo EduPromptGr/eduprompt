@@ -1,11 +1,6 @@
 # nixpacks.toml — Railway build configuration
-# Χρησιμοποιούμε python3 -m pip αντί για pip (pip δεν είναι στο PATH στο Nix).
-
-[phases.setup]
-nixPkgs = ["python311Full"]
-
-[phases.install]
-cmds = ["python3.11 -m pip install --no-cache-dir -r requirements.txt"]
+# Αφήνουμε το nixpacks να χειριστεί Python+pip αυτόματα.
+# Μόνο ορίζουμε την εντολή εκκίνησης.
 
 [start]
-cmd = "python3.11 -m uvicorn api.main:app --host 0.0.0.0 --port $PORT"
+cmd = "uvicorn api.main:app --host 0.0.0.0 --port $PORT"
