@@ -1,11 +1,11 @@
 # nixpacks.toml — Railway build configuration
-# Κλειδώνουμε Python 3.11 για συμβατότητα με supabase-py και λοιπά packages.
+# Χρησιμοποιούμε python3 -m pip αντί για pip (pip δεν είναι στο PATH στο Nix).
 
 [phases.setup]
-nixPkgs = ["python311"]
+nixPkgs = ["python311Full"]
 
 [phases.install]
-cmds = ["pip install -r requirements.txt"]
+cmds = ["python3.11 -m pip install --no-cache-dir -r requirements.txt"]
 
 [start]
-cmd = "uvicorn api.main:app --host 0.0.0.0 --port $PORT"
+cmd = "python3.11 -m uvicorn api.main:app --host 0.0.0.0 --port $PORT"
