@@ -150,10 +150,7 @@ export default function GenerateForm({ initial }: GenerateFormProps = {}) {
   const [curriculumOpen, setCurriculumOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [loadingStep, setLoadingStep] = useState(0)
-  const [error, setError] = useState<{
-    message: string
-    rateLimited?: boolean
-  } | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Partial<
     Record<keyof FormState, string>
   >>({})
@@ -231,21 +228,9 @@ export default function GenerateForm({ initial }: GenerateFormProps = {}) {
           }),
         })
 
-        if (res.status === 429) {
-          const j = (await res.json().catch(() => ({}))) as ApiError
-          setError({
-            message:
-              extractErrorMessage(j) ||
-              'Ξεπέρασες το όριο σεναρίων για το πλάνο σου.',
-            rateLimited: true,
-          })
-          return
-        }
-
         if (!res.ok) {
           const j = (await res.json().catch(() => ({}))) as ApiError
-          setError({
-            message:
+          setError(
               extractErrorMessage(j) ||
               `Σφάλμα από τον server (HTTP ${res.status}).`,
           })
@@ -254,17 +239,12 @@ export default function GenerateForm({ initial }: GenerateFormProps = {}) {
 
         const data = (await res.json()) as GenerateResponse
         if (!data.prompt_id) {
-          setError({
-            message: 'Λάθος απάντηση από τον server — δεν υπάρχει prompt_id.',
-          })
+          setError('Λάθος απάντηση από τον server — δεν υπάρχει prompt_id.')
           return
         }
         router.push(`/prompts/${data.prompt_id}`)
       } catch (err) {
-        setError({
-          message:
-            (err as Error).message || 'Πρόβλημα δικτύου. Προσπάθησε ξανά.',
-        })
+        setError((err as Error).message || 'Πρόβλημα δικτύου. Προσπάθησε ξανά.')
       } finally {
         setSubmitting(false)
       }
@@ -679,23 +659,9 @@ export default function GenerateForm({ initial }: GenerateFormProps = {}) {
       {error && (
         <div
           role="alert"
-          className={
-            error.rateLimited
-              ? 'border-2 border-amber-300 bg-amber-50 rounded-xl p-4 text-sm text-amber-900'
-              : 'border-2 border-rose-300 bg-rose-50 rounded-xl p-4 text-sm text-rose-900'
-          }
+          className="border-2 border-rose-300 bg-rose-50 rounded-xl p-4 text-sm text-rose-900"
         >
-          <p>{error.message}</p>
-          {error.rateLimited && (
-            <p className="mt-1.5">
-              <Link
-                href="/pricing"
-                className="font-semibold underline hover:no-underline"
-              >
-                Δες τα πλάνα →
-              </Link>
-            </p>
-          )}
+          <p>{error}</p>
         </div>
       )}
 

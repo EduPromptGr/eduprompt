@@ -28,7 +28,6 @@ import { usePathname, useRouter } from 'next/navigation'
 export interface HeaderUser {
   email: string
   isAdmin: boolean
-  plan?: string  // 'free' | 'pro' | 'school' | 'paused' — optional, για school nav link
 }
 
 interface NavItem {
@@ -42,8 +41,6 @@ interface NavItem {
   match?: string[]
   /** Αν true, το link εμφανίζεται μόνο σε admin users. */
   adminOnly?: boolean
-  /** Αν true, το link εμφανίζεται μόνο σε school plan users. */
-  schoolOnly?: boolean
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -53,17 +50,6 @@ const NAV_ITEMS: NavItem[] = [
     href: '/journal',
     label: 'Ημερολόγιο',
     match: ['/journal'],
-  },
-  {
-    href: '/school',
-    label: 'Σχολείο',
-    match: ['/school'],
-    schoolOnly: true,
-  },
-  {
-    href: '/referral',
-    label: 'Παραπομπές',
-    match: ['/referral'],
   },
   {
     href: '/profile',
@@ -114,7 +100,6 @@ export default function Header({ user }: { user: HeaderUser | null }) {
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.adminOnly && !user?.isAdmin) return false
-    if (item.schoolOnly && user?.plan !== 'school') return false
     return true
   })
 

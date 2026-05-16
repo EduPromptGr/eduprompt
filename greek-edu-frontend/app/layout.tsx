@@ -58,14 +58,13 @@ async function loadHeaderUser(): Promise<HeaderUser | null> {
     // υποθέτουμε non-admin.
     const { data } = await supabase
       .from('users')
-      .select('is_admin, subscription_status')
+      .select('is_admin')
       .eq('id', user.id)
       .maybeSingle()
 
     return {
       email: user.email ?? '',
       isAdmin: data?.is_admin === true,
-      plan: data?.subscription_status ?? 'free',
     }
   } catch (e) {
     console.error('layout loadHeaderUser failed', e)

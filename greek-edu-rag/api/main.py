@@ -35,12 +35,9 @@ from api.routers import (
     internal,
     journal,
     prompts,
-    referral,
     schedule_upload,
     schedules,
-    school,
     students,
-    webhooks,
     worksheets,
 )
 
@@ -80,10 +77,7 @@ app.add_middleware(
 app.include_router(generate.router)
 app.include_router(prompts.router)
 app.include_router(journal.router)
-app.include_router(school.router)
-app.include_router(referral.router)
 app.include_router(error_reports.router)
-app.include_router(webhooks.router)
 app.include_router(class_profile.router)
 app.include_router(worksheets.router)
 app.include_router(curriculum.router)
