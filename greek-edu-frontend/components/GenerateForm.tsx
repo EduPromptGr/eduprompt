@@ -231,9 +231,9 @@ export default function GenerateForm({ initial }: GenerateFormProps = {}) {
         if (!res.ok) {
           const j = (await res.json().catch(() => ({}))) as ApiError
           setError(
-              extractErrorMessage(j) ||
-              `Σφάλμα από τον server (HTTP ${res.status}).`,
-          })
+            extractErrorMessage(j) ||
+            `Σφάλμα από τον server (HTTP ${res.status}).`
+          )
           return
         }
 
