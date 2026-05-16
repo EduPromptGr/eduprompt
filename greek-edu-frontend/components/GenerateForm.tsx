@@ -28,6 +28,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import CurriculumDrawer from '@/components/CurriculumDrawer'
+import StudentSelector from '@/components/StudentSelector'
 
 // ── Whitelists (mirrored από api/services/prompt_service.py) ─────
 //
@@ -143,6 +144,8 @@ export default function GenerateForm({ initial }: GenerateFormProps = {}) {
     ...INITIAL_STATE,
     ...initial,
   })
+  const [mode, setMode] = useState<'classroom' | 'tutoring'>('classroom')
+  const [studentId, setStudentId] = useState<string | null>(null)
   const [showExtra, setShowExtra] = useState(false)
   const [curriculumOpen, setCurriculumOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -223,6 +226,8 @@ export default function GenerateForm({ initial }: GenerateFormProps = {}) {
             strategy: form.strategy || null,
             environments: form.environments,
             extra_instructions: form.extraInstructions.trim() || null,
+            mode,
+            student_id: mode === 'tutoring' ? studentId : null,
           }),
         })
 
@@ -339,6 +344,56 @@ export default function GenerateForm({ initial }: GenerateFormProps = {}) {
       noValidate
       className="space-y-6 max-w-2xl"
     >
+      {/* ── Mode toggle ────────────────────────────── */}
+      <div>
+        <p className="block text-sm font-semibold text-gray-700 mb-2">
+          🎓 Τύπος μαθήματος
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={mode === 'classroom'}
+            onClick={() => { setMode('classroom'); setStudentId(null) }}
+            className={
+              mode === 'classroom'
+                ? 'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-violet-500 bg-violet-50 text-violet-700 text-sm font-bold shadow-sm'
+                : 'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-gray-200 text-gray-600 text-sm font-medium hover:border-violet-300 hover:bg-violet-50 transition-colors'
+            }
+          >
+            🏫 <span>Τάξη <span className="text-xs font-normal opacity-70">(35 λεπτά)</span></span>
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={mode === 'tutoring'}
+            onClick={() => setMode('tutoring')}
+            className={
+              mode === 'tutoring'
+                ? 'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-brand-500 bg-brand-50 text-brand-700 text-sm font-bold shadow-sm'
+                : 'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-gray-200 text-gray-600 text-sm font-medium hover:border-brand-300 hover:bg-brand-50 transition-colors'
+            }
+          >
+            👤 <span>Ιδιαίτερο <span className="text-xs font-normal opacity-70">(60 λεπτά)</span></span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── Student selector (tutoring mode only) ─── */}
+      {mode === 'tutoring' && (
+        <div className="rounded-xl border border-brand-200 bg-brand-50/30 p-4 animate-fade-in">
+          <p className="text-sm font-semibold text-brand-800 mb-3">
+            👤 Μαθητής{' '}
+            <span className="text-xs font-normal text-brand-500">(προαιρετικό — ενισχύει την εξατομίκευση)</span>
+          </p>
+          <StudentSelector
+            grade={form.grade ?? undefined}
+            selectedId={studentId}
+            onSelect={setStudentId}
+          />
+        </div>
+      )}
+
       {/* ── Grade (radiogroup) ─────────────────────── */}
       <fieldset>
         <legend className="block text-sm font-semibold text-gray-700 mb-2">
@@ -557,7 +612,7 @@ export default function GenerateForm({ initial }: GenerateFormProps = {}) {
       {/* ── Environments (multi-checkbox) ──────────── */}
       <fieldset>
         <legend className="block text-sm font-semibold text-gray-700 mb-2">
-          🌈 Διαφοροποίηση τάξης{' '}
+          🌈 {mode === 'tutoring' ? 'Ειδικές ανάγκες / προφίλ μαθητή' : 'Διαφοροποίηση τάξης'}{' '}
           <span className="text-xs font-normal text-gray-400">
             (επίλεξε όσα ισχύουν)
           </span>
@@ -652,7 +707,12 @@ export default function GenerateForm({ initial }: GenerateFormProps = {}) {
           aria-busy={submitting}
           className="px-7 py-3 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-violet-200 transition-all"
         >
-          {submitting ? '⏳ Δημιουργία…' : '✨ Δημιουργία σεναρίου'}
+          {submitting
+            ? '⏳ Δημιουργία…'
+            : mode === 'tutoring'
+            ? '✨ Δημιουργία σεναρίου ιδιαίτερου'
+            : '✨ Δημιουργία σεναρίου τάξης'
+          }
         </button>
         <Link
           href="/saved"

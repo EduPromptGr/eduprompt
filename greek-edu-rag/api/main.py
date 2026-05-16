@@ -39,6 +39,7 @@ from api.routers import (
     schedule_upload,
     schedules,
     school,
+    students,
     webhooks,
     worksheets,
 )
@@ -88,6 +89,7 @@ app.include_router(worksheets.router)
 app.include_router(curriculum.router)
 app.include_router(schedules.router)
 app.include_router(schedule_upload.router)   # POST /api/schedules/parse-file
+app.include_router(students.router)          # Private Tutoring Mode
 app.include_router(internal.router)
 
 

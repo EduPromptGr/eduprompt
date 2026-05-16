@@ -22,7 +22,7 @@ Rate limits (από pricing cards):
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -59,6 +59,9 @@ class GenerateRequest(BaseModel):
     environments: list[str] = Field(default_factory=list, max_length=6)
     class_profile_id: Optional[str] = None
     extra_instructions: Optional[str] = Field(default=None, max_length=400)
+    # Tutoring Mode
+    mode: Literal["classroom", "tutoring"] = "classroom"
+    student_id: Optional[str] = None
 
 
 # ── Endpoints ──────────────────────────────────────────────────
@@ -106,6 +109,8 @@ async def generate(
         environments=req.environments,
         class_profile_id=req.class_profile_id,
         extra_instructions=req.extra_instructions,
+        mode=req.mode,
+        student_id=req.student_id,
     )
 
     try:
