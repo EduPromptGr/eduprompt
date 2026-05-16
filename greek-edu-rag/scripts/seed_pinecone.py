@@ -28,12 +28,11 @@ Usage:
         --dry-run
 
 Env vars required:
-    OPENAI_API_KEY
     PINECONE_API_KEY
-    PINECONE_INDEX_NAME       (default: eduprompt-rag)
-    PINECONE_CLOUD            (default: aws)
-    PINECONE_REGION           (default: us-east-1)
-    EMBED_MODEL               (default: text-embedding-3-small, dim=1536)
+    PINECONE_INDEX   (default: eduprompt-curriculum)
+    PINECONE_CLOUD   (default: aws)
+    PINECONE_REGION  (default: us-east-1)
+    EMBED_MODEL      (default: multilingual-e5-large, dim=1024)
 
 Idempotent:
     Το vector_id γίνεται deterministic hash από (source + chunk_index),
@@ -58,13 +57,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator, Optional
 
-# Package imports (όχι requirements.txt εδώ — ο user τα έχει ήδη στο venv)
-try:
-    from openai import OpenAI
-except ImportError:
-    print("ERROR: openai package missing. Run: pip install openai", file=sys.stderr)
-    sys.exit(1)
-
 try:
     from pinecone import Pinecone, ServerlessSpec
 except ImportError:
@@ -81,15 +73,15 @@ logger = logging.getLogger("seed_pinecone")
 
 # ── Config ─────────────────────────────────────────────────────
 
-DEFAULT_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "eduprompt-rag")
+DEFAULT_INDEX_NAME = os.getenv("PINECONE_INDEX", "eduprompt-curriculum")
 DEFAULT_CLOUD = os.getenv("PINECONE_CLOUD", "aws")
 DEFAULT_REGION = os.getenv("PINECONE_REGION", "us-east-1")
-EMBED_MODEL = os.getenv("EMBED_MODEL", "text-embedding-3-small")
-EMBED_DIM = 1536  # text-embedding-3-small
+EMBED_MODEL = os.getenv("EMBED_MODEL", "multilingual-e5-large")
+EMBED_DIM = 1024           # multilingual-e5-large
 MAX_CHUNK_CHARS = 1000
 CHUNK_OVERLAP_CHARS = 150
 MIN_CHUNK_CHARS = 60        # skip tiny chunks (headers etc.)
-EMBED_BATCH_SIZE = 96       # OpenAI limit is 2048, ας μείνουμε συντηρητικοί
+EMBED_BATCH_SIZE = 64       # Pinecone Inference API — συντηρητικό batch size
 UPSERT_BATCH_SIZE = 100     # Pinecone recommends <= 100/request
 
 
@@ -229,7 +221,7 @@ def _read_jsonl(path: Path) -> Iterator[SourceEntry]:
                 yield entry
 
 
-# ── Pinecone + OpenAI ──────────────────────────────────────────
+# ── Pinecone Inference ─────────────────────────────────────────
 
 def _ensure_index(pc: Pinecone, index_name: str) -> None:
     """Δημιουργεί το index αν δεν υπάρχει (bootstrap mode)."""
@@ -255,16 +247,24 @@ def _ensure_index(pc: Pinecone, index_name: str) -> None:
     logger.warning("Index creation timeout — continuing anyway")
 
 
-def _embed_batch(oai: OpenAI, texts: list[str]) -> list[list[float]]:
-    """Embed a batch με retry-once σε 5xx/network errors."""
+def _embed_batch(pc: Pinecone, texts: list[str]) -> list[list[float]]:
+    """
+    Embed a batch χρησιμοποιώντας Pinecone Inference API.
+    input_type="passage" για indexing (vs "query" για search queries).
+    Retry-once σε network/API errors.
+    """
     for attempt in (1, 2):
         try:
-            resp = oai.embeddings.create(model=EMBED_MODEL, input=texts)
-            return [d.embedding for d in resp.data]
+            result = pc.inference.embed(
+                model=EMBED_MODEL,
+                inputs=texts,
+                parameters={"input_type": "passage", "truncate": "END"},
+            )
+            return [item.values for item in result]
         except Exception as e:
             if attempt == 1:
-                logger.warning("Embed batch failed (attempt 1): %s — retrying", e)
-                time.sleep(2)
+                logger.warning("Embed batch failed (attempt 1): %s — retrying in 3s", e)
+                time.sleep(3)
             else:
                 raise
 
@@ -313,12 +313,10 @@ def seed(
                         c.text[:80] + "…" if len(c.text) > 80 else c.text)
         return len(entries), 0
 
-    # Init clients
-    oai_key = os.getenv("OPENAI_API_KEY")
-    pc_key = os.getenv("PINECONE_API_KEY")
-    if not oai_key or not pc_key:
-        raise RuntimeError("OPENAI_API_KEY and PINECONE_API_KEY are required")
-    oai = OpenAI(api_key=oai_key)
+    # Init Pinecone client (no OpenAI needed!)
+    pc_key = os.getenv("PINECONE_API_KEY", "").strip()
+    if not pc_key:
+        raise RuntimeError("PINECONE_API_KEY is required")
     pc = Pinecone(api_key=pc_key)
 
     if bootstrap:
@@ -327,13 +325,15 @@ def seed(
 
     # Embed + upsert in batches
     upserted = 0
-    for i in range(0, len(all_chunks), EMBED_BATCH_SIZE):
+    total_batches = (len(all_chunks) + EMBED_BATCH_SIZE - 1) // EMBED_BATCH_SIZE
+    for batch_no, i in enumerate(range(0, len(all_chunks), EMBED_BATCH_SIZE), start=1):
         batch = all_chunks[i:i + EMBED_BATCH_SIZE]
         texts = [c.text for c in batch]
+        logger.info("Embedding batch %d/%d (%d chunks)…", batch_no, total_batches, len(texts))
         try:
-            vectors_embeddings = _embed_batch(oai, texts)
+            vectors_embeddings = _embed_batch(pc, texts)
         except Exception as e:
-            logger.error("Embed batch %d failed — skipping: %s", i // EMBED_BATCH_SIZE, e)
+            logger.error("Embed batch %d failed — skipping: %s", batch_no, e)
             continue
 
         pine_vectors = [

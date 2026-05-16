@@ -59,27 +59,34 @@ CREATE TRIGGER students_set_updated_at
 
 ALTER TABLE students ENABLE ROW LEVEL SECURITY;
 
+-- DROP πρώτα ώστε να είναι idempotent (IF NOT EXISTS δεν υποστηρίζεται σε policies)
+DROP POLICY IF EXISTS students_select_own      ON students;
+DROP POLICY IF EXISTS students_insert_own      ON students;
+DROP POLICY IF EXISTS students_update_own      ON students;
+DROP POLICY IF EXISTS students_delete_own      ON students;
+DROP POLICY IF EXISTS students_service_role_all ON students;
+
 -- Teachers can only see their own students
-CREATE POLICY IF NOT EXISTS students_select_own
+CREATE POLICY students_select_own
     ON students FOR SELECT
     USING (auth.uid() = user_id);
 
-CREATE POLICY IF NOT EXISTS students_insert_own
+CREATE POLICY students_insert_own
     ON students FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY IF NOT EXISTS students_update_own
+CREATE POLICY students_update_own
     ON students FOR UPDATE
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
 -- Hard-delete is allowed (but UI uses active=false soft-delete)
-CREATE POLICY IF NOT EXISTS students_delete_own
+CREATE POLICY students_delete_own
     ON students FOR DELETE
     USING (auth.uid() = user_id);
 
 -- Service-role bypass (needed by FastAPI backend)
-CREATE POLICY IF NOT EXISTS students_service_role_all
+CREATE POLICY students_service_role_all
     ON students FOR ALL
     USING (auth.jwt()->>'role' = 'service_role');
 
