@@ -22,6 +22,10 @@ import type { Metadata, Viewport } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import Header, { type HeaderUser } from '@/components/Header'
 
+// Το layout διαβάζει cookies (Supabase session) — όλες οι σελίδες
+// πρέπει να είναι dynamic ώστε να μην αποτύχει το static build.
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: {
     default: 'EduPrompt — Σενάρια διδασκαλίας με ΤΝ',
